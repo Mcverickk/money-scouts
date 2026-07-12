@@ -14,6 +14,12 @@ export function getPool(): pg.Pool {
       throw new Error('DATABASE_URL is not set (copy .env.example to .env)');
     }
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+    // Hosted Postgres (Neon) closes idle connections; pg surfaces that as a
+    // pool-level 'error' event which crashes the process when unhandled. The
+    // client is already discarded — logging is the correct recovery.
+    pool.on('error', (err) => {
+      console.error('[db] idle client error (connection discarded):', err.message);
+    });
   }
   return pool;
 }
