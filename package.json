@@ -17,7 +17,9 @@
     "start": "npm run start:${EDGE_DESK_SERVICE:-api}",
     "start:api": "npm run start -w @edge-desk/api",
     "start:ingestor": "npm run start -w @edge-desk/ingestor",
+    "start:workers": "npm run start -w @edge-desk/workers",
     "db:migrate": "npm run migrate -w @edge-desk/db",
+    "smoke:telegram": "tsx scripts/smokeTelegram.ts",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit"
   },

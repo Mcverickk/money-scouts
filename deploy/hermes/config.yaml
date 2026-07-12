@@ -1,0 +1,30 @@
+model:
+  # HERMES_MODEL can override this at runtime. Provider credentials are supplied
+  # only through Railway variables (for example OPENROUTER_API_KEY).
+  default: "anthropic/claude-sonnet-4.6"
+  provider: "auto"
+
+# The API-server manager needs delegation plus read-only research. It does not
+# need terminal/file access to produce the structured Edge Desk signal.
+platform_toolsets:
+  api_server: [delegation, web]
+  telegram: [hermes-telegram]
+
+platforms:
+  api_server:
+    enabled: true
+    extra:
+      host: "0.0.0.0"
+      port: 8642
+  webhook:
+    enabled: true
+    extra:
+      host: "0.0.0.0"
+      port: 8644
+      routes:
+        edge-desk-alert:
+          deliver: telegram
+          deliver_only: true
+          prompt: "{message}"
+          deliver_extra:
+            chat_id: "{destination}"

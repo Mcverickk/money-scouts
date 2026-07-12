@@ -48,6 +48,10 @@ Before starting workers, enable Hermes' API Server in `~/.hermes/.env` with
 `API_SERVER_ENABLED=true` and the same bearer key as `HERMES_API_KEY`, then run
 `hermes gateway`. See [`docs/HERMES_INTEGRATION.md`](docs/HERMES_INTEGRATION.md#api-server-bridge--the-typescript-orchestrator-service).
 
+For the production deployment layout, Railway service configuration, required
+variables, database migration order, and Telegram smoke test, see
+[`DEPLOYMENT.md`](DEPLOYMENT.md).
+
 ### Testing
 
 - **`npm test`** — always runs the mocked unit tests: Hermes HTTP/polling and trust-boundary
