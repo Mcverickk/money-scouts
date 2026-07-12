@@ -1,7 +1,6 @@
 # Hackathon Context
 
-Planning and design docs for Edge Desk, written during the Hermes buildathon. Nothing in this folder is application code — it's the pitch, product context, and technical architecture that the `Edge_desk/` implementation is built from.
+The buildathon-specific context: which track we're being judged on, the scoring rubric, and team/sprint logistics. This is not product design — for that, see [../Edge_desk](../Edge_desk).
 
-- [EDGE_DESK_OVERVIEW.md](EDGE_DESK_OVERVIEW.md) — project pitch: the loop, scoring targets, team/constraints, persona.
-- [HERMES_MARKET_AGENT_CONTEXT.md](HERMES_MARKET_AGENT_CONTEXT.md) — product scope, responsibility boundaries, trigger/decision contracts, reliability rules.
-- [TECH_ARCHITECTURE.md](TECH_ARCHITECTURE.md) — full technical architecture: components, data model, API contracts, build order, deployment shape.
+- [RULES_AND_SCORING.md](RULES_AND_SCORING.md) — track, scoring rubric with per-parameter targets and what proves them, power-up priority order.
+- [TEAM_AND_CONSTRAINTS.md](TEAM_AND_CONSTRAINTS.md) — sprint length, team roles, unassigned ownership gaps.

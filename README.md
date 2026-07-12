@@ -4,5 +4,5 @@ Edge Desk is an **agency**: a small team of domain-specialist AI agents that wat
 
 ## Repo structure
 
-- [`hackathon-context/`](hackathon-context) — the project pitch, product context, and technical architecture written during planning. Start here to understand the "why" and the target design.
-- [`Edge_desk/`](Edge_desk) — the Edge Desk implementation (backend architecture and repos, added separately).
+- [`hackathon-context/`](hackathon-context) — the hackathon itself: track, scoring rubric, team and sprint constraints.
+- [`Edge_desk/`](Edge_desk) — the Edge Desk product: the loop, technical architecture, data model, and how the Hermes Agent runtime is used to implement it. Backend code/repos land here too.
