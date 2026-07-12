@@ -213,7 +213,9 @@ Run these checks in order:
    the bot token, and channel permission in one step.
 6. Inject one replay/event through the API or database test harness and verify
    `agent_runs -> decisions -> delivery_outbox -> sent`. The alert sender creates
-   `+10/+20/+40` outcome jobs only after Telegram acknowledges delivery.
+   `+2/+3/+5` minute outcome jobs (default `OUTCOME_HORIZONS_MINUTES`, shortened
+   from the spec's +10/+20/+40 for fast demo feedback) only after Telegram
+   acknowledges delivery.
 
 ## Local container checks
 

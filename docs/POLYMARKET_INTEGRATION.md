@@ -109,7 +109,7 @@ of magnitude below these. Polling odds every 30–120s per market: trivially fin
 | --- | --- |
 | Resolve metadata + token IDs | Gamma `/markets`, `clobTokenIds` |
 | Live price/spread/trades | CLOB WS market channel |
-| REST snapshots (startup, recovery, +10/+20/+40) | CLOB `/book`, BBO/midpoint/spread |
+| REST snapshots (startup, recovery, +2/+3/+5) | CLOB `/book`, BBO/midpoint/spread |
 | Pre-event baseline recovery | CLOB `/prices-history` (1-min fidelity) |
 | Depth for configured notional | CLOB `/book` (sum levels) |
 | Activity / big wallets (optional) | Data `/trades` + `/holders` |

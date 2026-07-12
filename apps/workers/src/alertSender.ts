@@ -13,6 +13,8 @@ export interface AlertSenderWorkerOptions {
   maxAttempts?: number;
   retryBaseMs?: number;
   retryMaxMs?: number;
+  /** Minutes after send to schedule outcome checks. Default: 2/3/5 (fast demo feedback). */
+  outcomeHorizonsMinutes?: number[];
   signal?: AbortSignal;
   logger?: Pick<Console, 'info' | 'error'>;
 }
@@ -42,11 +44,12 @@ export async function runAlertSenderWorker(options: AlertSenderWorkerOptions = {
   const sender = options.sender ?? HermesTelegramClient.fromEnv();
   const pollIntervalMs =
     options.pollIntervalMs ?? envPositiveInteger('ALERT_SENDER_POLL_INTERVAL_MS', 1_000);
+  const outcomeHorizonsMinutes = options.outcomeHorizonsMinutes ?? envHorizonsMinutes();
   const logger = options.logger ?? console;
 
   logger.info('Telegram alert sender worker started');
   while (!options.signal?.aborted) {
-    const result = await processNextAlert(pool, sender, options);
+    const result = await processNextAlert(pool, sender, { ...options, outcomeHorizonsMinutes });
     if (result.status === 'idle') {
       await abortableDelay(pollIntervalMs, options.signal);
       continue;
@@ -71,7 +74,7 @@ export async function processNextAlert(
   sender: TelegramSender,
   options: Pick<
     AlertSenderWorkerOptions,
-    'maxAttempts' | 'retryBaseMs' | 'retryMaxMs'
+    'maxAttempts' | 'retryBaseMs' | 'retryMaxMs' | 'outcomeHorizonsMinutes'
   > = {},
 ): Promise<AlertDeliveryResult> {
   const job = await claimNextTelegramAlert(pool);
@@ -85,7 +88,7 @@ export async function processNextAlert(
       alertId: job.alertId,
       traceId: job.traceId,
     });
-    await persistDelivered(pool, job, delivery.providerMessageId);
+    await persistDelivered(pool, job, delivery.providerMessageId, options.outcomeHorizonsMinutes ?? envHorizonsMinutes());
     return {
       status: 'sent',
       job,
@@ -173,6 +176,7 @@ async function persistDelivered(
   pool: pg.Pool,
   job: AlertDeliveryJob,
   providerMessageId: string,
+  outcomeHorizonsMinutes: number[],
 ): Promise<void> {
   const client = await pool.connect();
   const sentAt = new Date();
@@ -194,9 +198,9 @@ async function persistDelivered(
     await client.query(
       `insert into outcome_jobs (alert_id, horizon_minutes, scheduled_for)
        select $1, horizon, $2::timestamptz + make_interval(mins => horizon)
-         from unnest(array[10, 20, 40]) as horizons(horizon)
+         from unnest($3::int[]) as horizons(horizon)
        on conflict (alert_id, horizon_minutes) do nothing`,
-      [job.alertId, sentAt],
+      [job.alertId, sentAt, outcomeHorizonsMinutes],
     );
     await client.query('commit');
   } catch (error) {
@@ -277,6 +281,17 @@ function envPositiveInteger(name: string, fallback: number): number {
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
   return value;
+}
+
+/** Shortened from the spec's +10/+20/+40 to +2/+3/+5 for fast demo feedback (still 3 checkpoints). */
+function envHorizonsMinutes(): number[] {
+  const raw = process.env.OUTCOME_HORIZONS_MINUTES?.trim();
+  if (!raw) return [2, 3, 5];
+  const values = raw.split(',').map((part) => Number(part.trim()));
+  if (values.some((value) => !Number.isInteger(value) || value <= 0)) {
+    throw new Error('OUTCOME_HORIZONS_MINUTES must be a comma-separated list of positive integers');
+  }
+  return values;
 }
 
 function abortableDelay(ms: number, signal?: AbortSignal): Promise<void> {

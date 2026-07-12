@@ -13,7 +13,7 @@ Polymarket market selected (real API, no account needed)
 → lag detector scores it, evidence-cited
 → Telegram alert sent to a real chat
 → PostgreSQL stores the full per-alert audit trail and delivery outbox
-→ cron tracks odds at +10/+20/+40 minutes
+→ cron tracks odds at +2/+3/+5 minutes (shortened from the spec's +10/+20/+40 for fast demo feedback)
 → outcome (right/wrong) feeds back into the eval set and re-scores the agency
 → Cloudflare scoreboard updates publicly
 
@@ -36,7 +36,7 @@ flowchart TD
     DB --> M["Matcher / lag detector"]
     M --> DB
     DB --> A["Durable alert sender"] --> TG["Telegram"]
-    DB --> T["Outcome tracker<br/>+10/+20/+40"] --> DB
+    DB --> T["Outcome tracker<br/>+2/+3/+5"] --> DB
     DB --> SCORE["Public scoreboard"]
     R["Replay harness"] --> API["Normal ingest API"] --> H
 ```
@@ -57,7 +57,7 @@ See [TECH_ARCHITECTURE.md](TECH_ARCHITECTURE.md) for the full component breakdow
 
 ## MVP scope
 
-**Must-have**: Hermes manager, sports specialist, shared Polymarket/evidence capabilities, deterministic lag detector, durable alert composer + Telegram delivery, PostgreSQL ledger, observability trace, `+10/+20/+40` outcome tracker, replay harness, and public scoreboard.
+**Must-have**: Hermes manager, sports specialist, shared Polymarket/evidence capabilities, deterministic lag detector, durable alert composer + Telegram delivery, PostgreSQL ledger, observability trace, `+2/+3/+5` minute outcome tracker (`OUTCOME_HORIZONS_MINUTES`, shortened from the spec's +10/+20/+40 for fast demo feedback), replay harness, and public scoreboard.
 
 **Nice-to-have**: geopolitics and crypto specialists, Dodo entitlements, richer management UI, and additional messaging channels after verification.
 

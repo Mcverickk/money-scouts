@@ -119,7 +119,8 @@ that Hermes already delivered returns `status=duplicate` and is treated as succe
 On success, the sender atomically:
 
 - Marks the outbox row and alert `sent` and stores Hermes' delivery ID.
-- Creates the `+10/+20/+40` outcome jobs relative to the actual send time.
+- Creates the `+2/+3/+5` minute outcome jobs relative to the actual send time
+  (`OUTCOME_HORIZONS_MINUTES`, shortened from the spec's +10/+20/+40 for fast demo feedback).
 
 Transient network, rate-limit, and gateway failures use capped exponential backoff. Invalid
 authentication/configuration fails permanently rather than retrying forever. Run a one-off
@@ -154,7 +155,7 @@ This is the better fit for the manager/org-structure and observability requireme
 - **L5 org-structure stretch is a config flag, not new code**: default `max_spawn_depth` is 1 (flat). Setting a profile's `role="orchestrator"` and raising `max_spawn_depth` lets the manager spawn new specialist roles mid-task — the exact "emergent org" criterion.
 - Auto-decomposition (`kanban.auto_decompose: true`, default) can run an LLM decomposer on a "watch market X" triage task and fan it into the graph automatically — this can *be* the manager's planning step instead of us hand-writing it.
 
-**Recommended split:** each domain specialist uses `delegate_task` for fast capability fan-out; the alert's post-publish lifecycle (outcome tracking, review, escalation-by-exception, eval feedback) runs as durable tasks, because that part of the pipeline must survive the 10–40 minute convergence window, be inspectable afterward, and support human review on exceptions.
+**Recommended split:** each domain specialist uses `delegate_task` for fast capability fan-out; the alert's post-publish lifecycle (outcome tracking, review, escalation-by-exception, eval feedback) runs as durable tasks, because that part of the pipeline must survive the multi-minute convergence window, be inspectable afterward, and support human review on exceptions.
 
 ## Cron — the outcome tracker
 
@@ -164,7 +165,7 @@ cronjob(action="create", name="edge-desk-outcomes",
         no_agent=True, deliver="telegram")
 ```
 
-- PostgreSQL `outcome_jobs` remains the authoritative list of `+10/+20/+40` work. A frequent Hermes cron script can atomically claim due rows, fetch prices, and write outcomes.
+- PostgreSQL `outcome_jobs` remains the authoritative list of `+2/+3/+5` minute work. A frequent Hermes cron script can atomically claim due rows, fetch prices, and write outcomes.
 - The gateway daemon ticks the scheduler every 60 seconds. In `no_agent=True` mode the script runs without an LLM; empty stdout stays silent, while failures can still deliver to Telegram.
 - Use an agent only for a disputed outcome that requires interpretation. Routine price math stays deterministic and near-zero token cost.
 

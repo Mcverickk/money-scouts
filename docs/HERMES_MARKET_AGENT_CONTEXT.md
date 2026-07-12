@@ -28,7 +28,7 @@ flowchart TD
     M --> DB
     DB --> A["Alert sender / card composer"]
     A --> TG["Telegram channels<br/>optional Dodo entitlement gate"]
-    DB --> T["Outcome tracker<br/>+10 / +20 / +40 min"]
+    DB --> T["Outcome tracker<br/>+2 / +3 / +5 min"]
     T --> DB
     DB --> S["Public scoreboard"]
     R["Replay harness"] --> API
@@ -79,7 +79,9 @@ This preserves domain expertise while keeping market-data and evidence contracts
 
 ### Outcome tracker and scoreboard
 
-- Records price snapshots at `+10`, `+20`, and `+40` minutes after a sent alert.
+- Records price snapshots at `+2`, `+3`, and `+5` minutes after a sent alert (shortened
+  from the original `+10`/`+20`/`+40` spec for fast demo feedback; configurable via
+  `OUTCOME_HORIZONS_MINUTES`).
 - Scores direction, magnitude, and data quality at each horizon.
 - Publishes aggregate hit rate only from eligible, non-replay alerts; replay results are labeled separately.
 
@@ -148,7 +150,7 @@ Example matcher decision:
 3. Shared Polymarket and evidence tools plus the sports specialist.
 4. Deterministic matcher and model-written, cited explanation.
 5. Durable Telegram outbox and delivery receipt.
-6. `+10/+20/+40` outcome jobs and scoreboard.
+6. `+2/+3/+5` minute outcome jobs and scoreboard.
 7. Replay fixtures through the same ingest path.
 8. Geopolitics and crypto specialists using the same contracts.
 9. Optional Dodo channel entitlements.

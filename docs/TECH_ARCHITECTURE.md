@@ -12,7 +12,7 @@ selected market
 -> Hermes domain specialist gathers price and evidence
 -> matcher estimates expected move vs observed repricing
 -> durable Telegram alert
--> +10/+20/+40 minute price checks
+-> +2/+3/+5 minute price checks
 -> scored outcome and public aggregate
 ```
 
@@ -33,7 +33,7 @@ The first version must not auto-trade. A future trade executor remains isolated 
 - **The matcher is hybrid**: deterministic numeric gates plus model-assisted extraction, classification, and explanation.
 - **Alert delivery uses a transactional outbox** so an accepted decision is not lost after a crash.
 - **Replay enters through the normal ingest API** and is labeled; it never writes synthetic rows directly into live tables.
-- **Outcomes are measured at +10, +20, and +40 minutes**. Replay and live aggregates stay separate.
+- **Outcomes are measured at +2, +3, and +5 minutes** (`OUTCOME_HORIZONS_MINUTES`; shortened from an original +10/+20/+40 spec for fast demo feedback). Replay and live aggregates stay separate.
 - **Dodo entitlements are optional and downstream of analysis**; a payment outage must not stop the core pipeline.
 
 ### 2.2 Why domain agents and shared tools are both needed
@@ -86,7 +86,7 @@ flowchart TD
     DB --> SENDER["Alert sender<br/>outbox + card composer"]
     SENDER --> GATE{"Channel entitled?"}
     GATE -->|free or paid| TG["Telegram via Hermes gateway"]
-    DB --> TRACKER["Outcome tracker<br/>+10 / +20 / +40"]
+    DB --> TRACKER["Outcome tracker<br/>+2 / +3 / +5"]
     TRACKER --> DB
     DB --> BOARD["Scoreboard<br/>labeled hit rate"]
 ```
@@ -330,7 +330,8 @@ The idempotency key prevents two local workers from intentionally sending the sa
 
 ### 4.9 Outcome Tracker
 
-When an alert reaches `sent`, create follow-up jobs for `+10`, `+20`, and `+40` minutes from `sentAt`.
+When an alert reaches `sent`, create follow-up jobs for `+2`, `+3`, and `+5` minutes from `sentAt`
+(`OUTCOME_HORIZONS_MINUTES`; shortened from an original +10/+20/+40 spec for fast demo feedback).
 
 Each job:
 
@@ -340,7 +341,7 @@ Each job:
 - Records lateness and provider errors rather than silently shifting the intended horizon.
 - Runs without an LLM unless a disputed case needs interpretation.
 
-Late jobs should preserve both `scheduledFor` and `checkedAt`. A check intended for +10 minutes but executed at +17 must not be presented as a +10 observation.
+Late jobs should preserve both `scheduledFor` and `checkedAt`. A check intended for +2 minutes but executed at +5 must not be presented as a +2 observation.
 
 ### 4.10 Scoreboard
 
@@ -674,7 +675,7 @@ The services may deploy as one process for the buildathon. Keep module and data 
 6. Pre-event/current snapshot capture and deterministic matcher gates.
 7. Model-assisted extraction and cited alert explanation.
 8. Transactional alert outbox and real Telegram delivery receipt.
-9. `+10/+20/+40` outcome jobs.
+9. `+2/+3/+5` minute outcome jobs.
 10. One trace/detail page and public scoreboard.
 11. One versioned replay fixture through the normal ingest path.
 12. Geopolitics and crypto specialists only after the sports loop works.
@@ -768,7 +769,7 @@ The demo succeeds when:
 - The matcher shows its baseline, observed move, expected move, gates, and decision.
 - A real Telegram channel receives a locally deduplicated, cited alert.
 - PostgreSQL contains the full run and delivery receipt.
-- `+10/+20/+40` jobs produce labeled outcomes, or the replay clock demonstrates the same path.
+- `+2/+3/+5` minute jobs produce labeled outcomes, or the replay clock demonstrates the same path.
 - The scoreboard distinguishes live from replay statistics.
 - One run can be opened end to end without consulting terminal logs.
 

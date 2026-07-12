@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Edge Desk — an 8-hour hackathon build (Hermes Buildathon, "AI as Agency" track). Notification-only Polymarket market intelligence: domain-specialist agents watch order books and fresh evidence, a deterministic lag detector flags odds that lag reality, a cited alert goes to Telegram, and the call is scored at +10/+20/+40 minutes. No auto-trading.
+Edge Desk — an 8-hour hackathon build (Hermes Buildathon, "AI as Agency" track). Notification-only Polymarket market intelligence: domain-specialist agents watch order books and fresh evidence, a deterministic lag detector flags odds that lag reality, a cited alert goes to Telegram, and the call is scored at +2/+3/+5 minutes (shortened from the spec's +10/+20/+40 for fast demo feedback — see `OUTCOME_HORIZONS_MINUTES`). No auto-trading.
 
 ## The plan is the source of truth
 
@@ -34,17 +34,20 @@ npm run typecheck          # tsc --noEmit across all workspaces
 
 No build step: everything runs through `tsx` directly from TypeScript source. Tests use
 Node's built-in test runner through `tsx --test`. `apps/workers/src/*.test.ts` are pure/mocked
-(no I/O); `orchestratorService.integration.test.ts` runs the same claim/load/persist code against
-a real Postgres and self-skips when `DATABASE_URL` is absent. `npm run test -w @edge-desk/workers`
-runs with cwd `apps/workers`, so the root `.env` is not auto-loaded there — export
-`DATABASE_URL=postgres://postgres:postgres@localhost:5432/edge_desk` in the shell before `npm test`
-to pick up the integration suite.
+(no I/O); `orchestratorService.integration.test.ts` and `outcomeTracker.integration.test.ts` run
+the same claim/load/persist code against a real Postgres and self-skip when `DATABASE_URL` is
+absent. `npm run test -w @edge-desk/workers` runs with cwd `apps/workers`, so the root `.env` is
+not auto-loaded there — export `DATABASE_URL=postgres://postgres:postgres@localhost:5432/edge_desk`
+in the shell before `npm test` to pick up the integration suites. The test script runs with
+`--test-concurrency=1`: multiple integration-test files truncate the same shared tables in
+`beforeEach`, so file-level parallelism causes cross-file races — keep new integration test files
+serial too, or give them their own schema.
 
 ## Architecture
 
 npm-workspaces monorepo; packages import each other as `@edge-desk/*` (root `tsconfig.json` paths + workspace symlinks — both must list a package for it to resolve).
 
-Data flow: `apps/ingestor` watches Polymarket WebSockets (CLOB market channel → throttled `market_snapshots` baseline rows; sports feed score diffs → `POST /v1/events` + Linkup corroboration into `evidence`) → `apps/api` accepts normalized events (idempotent on `(source, sourceEventId)`, returns 202 + durable runId) → Hermes orchestrator (`apps/workers/src/orchestrator.ts`) routes to a domain specialist (`packages/agents`) which fans out through shared adapters (`packages/integrations`) → deterministic matcher (`packages/scoring/src/lagDetector.ts`) writes decision + alert + outbox **in one transaction** → alert sender delivers via the Hermes Telegram gateway → outcome tracker re-checks at +10/+20/+40. PostgreSQL (`packages/db`) is the system of record for everything, including the per-step agent trace.
+Data flow: `apps/ingestor` watches Polymarket WebSockets (CLOB market channel → throttled `market_snapshots` baseline rows; sports feed score diffs → `POST /v1/events` + Linkup corroboration into `evidence`) → `apps/api` accepts normalized events (idempotent on `(source, sourceEventId)`, returns 202 + durable runId) → Hermes orchestrator (`apps/workers/src/orchestrator.ts`) routes to a domain specialist (`packages/agents`) which fans out through shared adapters (`packages/integrations`) → deterministic matcher (`packages/scoring/src/lagDetector.ts`) writes decision + alert + outbox **in one transaction** → alert sender delivers via the Hermes Telegram gateway → outcome tracker re-checks at +2/+3/+5 minutes (`OUTCOME_HORIZONS_MINUTES`). PostgreSQL (`packages/db`) is the system of record for everything, including the per-step agent trace.
 
 The TypeScript orchestrator connects to the real Hermes runtime through its authenticated
 API Server Runs API. `apps/workers/src/orchestratorService.ts` claims `agent_runs` with

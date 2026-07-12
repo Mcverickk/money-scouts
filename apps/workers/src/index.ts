@@ -5,6 +5,7 @@ import { runAlertSenderWorker } from './alertSender.js';
 import { runMatcherWorker } from './matcher.js';
 import { createHermesOrchestratorFromEnv } from './orchestrator.js';
 import { runOrchestratorWorker } from './orchestratorService.js';
+import { runOutcomeTrackerWorker } from './outcomeTracker.js';
 
 const abortController = new AbortController();
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
@@ -42,6 +43,14 @@ if (roles.has('alert_sender')) {
 if (roles.has('matcher')) {
   workers.push(
     runMatcherWorker({
+      pool,
+      signal: abortController.signal,
+    }),
+  );
+}
+if (roles.has('outcome_tracker')) {
+  workers.push(
+    runOutcomeTrackerWorker({
       pool,
       signal: abortController.signal,
     }),

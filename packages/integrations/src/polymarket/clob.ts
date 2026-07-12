@@ -1,6 +1,6 @@
 // Polymarket CLOB adapter — prices, spread, depth.
 // Per docs/TECH_ARCHITECTURE.md §2.1: WebSocket for live watched prices; REST for
-// startup snapshots, recovery, manual checks, and +10/+20/+40 follow-ups.
+// startup snapshots, recovery, manual checks, and +2/+3/+5 minute follow-ups.
 // Base URL: POLYMARKET_CLOB_URL. Endpoint audit: docs/POLYMARKET_INTEGRATION.md.
 
 import WebSocket from 'ws';
