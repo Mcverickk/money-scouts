@@ -14,6 +14,7 @@
     "dev:api": "npm run dev -w @edge-desk/api",
     "dev:ingestor": "npm run dev -w @edge-desk/ingestor",
     "dev:workers": "npm run dev -w @edge-desk/workers",
+    "start": "npm run start:${EDGE_DESK_SERVICE:-api}",
     "start:api": "npm run start -w @edge-desk/api",
     "start:ingestor": "npm run start -w @edge-desk/ingestor",
     "db:migrate": "npm run migrate -w @edge-desk/db",
