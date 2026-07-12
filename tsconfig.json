@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@edge-desk/contracts": ["packages/contracts/src/index.ts"],
+      "@edge-desk/db": ["packages/db/src/index.ts"],
+      "@edge-desk/integrations": ["packages/integrations/src/index.ts"],
+      "@edge-desk/agents": ["packages/agents/src/index.ts"],
+      "@edge-desk/scoring": ["packages/scoring/src/index.ts"]
+    }
+  },
+  "include": ["apps/*/src/**/*.ts", "packages/*/src/**/*.ts"]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@edge-desk/workers",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@edge-desk/agents": "*",
+    "@edge-desk/contracts": "*",
+    "@edge-desk/db": "*",
+    "@edge-desk/integrations": "*",
+    "@edge-desk/scoring": "*",
+    "dotenv": "^16.4.0"
+  }
+}
