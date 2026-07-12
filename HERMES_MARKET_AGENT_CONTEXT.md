@@ -38,7 +38,7 @@ PostgreSQL is the system of record for market snapshots, evidence, agent runs, d
 
 The domain specialists are the visible Hermes organization. They share reusable capabilities instead of reimplementing integrations:
 
-- `fetch_market_snapshot`: Gamma metadata plus CLOB price, spread, and depth.
+- `fetch_market_snapshot`: Gamma metadata plus CLOB price, spread, and depth; use the CLOB market WebSocket for live watched prices and REST for recovery/follow-ups.
 - `fetch_fresh_evidence`: Linkup, a live match feed, or another category-appropriate source.
 - `classify_event_impact`: normalize evidence into a category-specific signal.
 - `match_signal_to_market`: compare expected movement with observed repricing.
@@ -52,7 +52,7 @@ This preserves domain expertise while keeping market-data and evidence contracts
 - Receives normalized triggers and scheduled market checks.
 - Selects the domain specialist from the stored market category.
 - Delegates independent price and evidence work in parallel.
-- Reviews stale, missing, or contradictory watcher results.
+- Reviews stale, missing, or contradictory capability results.
 - Persists the run trace and schedules durable follow-ups.
 - Sends composed alerts through the Telegram gateway.
 

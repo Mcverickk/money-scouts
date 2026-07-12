@@ -28,6 +28,7 @@ The first version must not auto-trade. A future trade executor remains isolated 
 - **PostgreSQL is the system of record** for configuration, raw inputs, snapshots, traces, decisions, alerts, deliveries, and outcomes.
 - **Telegram is the first delivery channel** through the Hermes gateway.
 - **Polymarket Gamma, CLOB, and Data APIs have distinct adapters** for metadata, order books/prices, and activity where needed.
+- **Use the CLOB market WebSocket for live watched prices**; reserve REST for startup snapshots, manual checks, follow-up horizons, and recovery.
 - **Linkup or a direct live feed supplies fresh evidence**; every cited fact retains source and retrieval timestamps.
 - **The matcher is hybrid**: deterministic numeric gates plus model-assisted extraction, classification, and explanation.
 - **Alert delivery uses a transactional outbox** so an accepted decision is not lost after a crash.
@@ -168,7 +169,8 @@ Use Hermes' fast delegation primitive for latency-sensitive fan-out and durable 
 Provides normalized operations to every domain specialist:
 
 - Resolve market metadata and outcome token IDs.
-- Fetch current outcome price, best bid/ask, spread, and timestamp.
+- Subscribe to live outcome price, best bid/ask, spread, and trade updates through the CLOB market WebSocket.
+- Fetch REST snapshots on startup, reconnect, manual checks, and scheduled outcome checks.
 - Fetch order-book depth for a configured notional.
 - Optionally fetch relevant market/trade activity.
 - Persist raw response metadata and normalized snapshots.
@@ -324,6 +326,8 @@ Delivery rules:
 - Record the Telegram message ID and attempt history.
 - If paid channels exist, check a cached entitlement immediately before send. Analysis still completes if the entitlement provider is unavailable.
 
+The idempotency key prevents two local workers from intentionally sending the same alert. Telegram does not provide a general client-supplied idempotency key, so an ambiguous network timeout after provider acceptance can still produce a rare duplicate on retry; preserve the attempt for reconciliation and make the alert trace ID visible in the message.
+
 ### 4.9 Outcome Tracker
 
 When an alert reaches `sent`, create follow-up jobs for `+10`, `+20`, and `+40` minutes from `sentAt`.
@@ -392,7 +396,10 @@ Unique: `(market_id, token_id)`.
 - `mode`: `live | replay`
 - `replay_run_id nullable`
 
-Unique: `(source, source_event_id, mode, replay_run_id)`.
+Use two partial unique indexes so PostgreSQL `NULL` semantics cannot bypass live deduplication:
+
+- `(source, source_event_id)` where `mode = 'live'`.
+- `(source, source_event_id, replay_run_id)` where `mode = 'replay'`.
 
 ### `market_snapshots`
 
@@ -444,7 +451,7 @@ Decisions are immutable. Re-analysis creates another version linked to the same 
 - `message`, `status`: `pending | sending | sent | failed | suppressed`
 - `entitlement_tier`, `created_at`, `sent_at nullable`
 
-Unique: `decision_id` where action is notify.
+Unique: `decision_id`. Only `notify` decisions create alert rows.
 
 ### `delivery_outbox`
 
@@ -632,7 +639,7 @@ The services may deploy as one process for the buildathon. Keep module and data 
 ## 9. MVP Build Order
 
 1. PostgreSQL migrations for markets, events, snapshots, runs, decisions, alerts, outbox, and outcomes.
-2. Polymarket metadata/CLOB adapter for one selected sports market.
+2. Polymarket metadata plus CLOB REST/WebSocket adapters for one selected sports market.
 3. Idempotent `POST /v1/events` plus a stored run trace.
 4. Hermes orchestration wrapper and the sports specialist.
 5. Live feed payload handling plus optional Linkup corroboration.
@@ -731,8 +738,16 @@ The demo succeeds when:
 - Hermes visibly routes it to the correct domain specialist.
 - Polymarket prices and fresh evidence are captured with timestamps.
 - The matcher shows its baseline, observed move, expected move, gates, and decision.
-- A real Telegram channel receives one idempotent, cited alert.
+- A real Telegram channel receives a locally deduplicated, cited alert.
 - PostgreSQL contains the full run and delivery receipt.
 - `+10/+20/+40` jobs produce labeled outcomes, or the replay clock demonstrates the same path.
 - The scoreboard distinguishes live from replay statistics.
 - One run can be opened end to end without consulting terminal logs.
+
+## 15. Primary Implementation References
+
+- [Hermes delegation](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation/)
+- [Hermes Kanban](https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban)
+- [Hermes scheduled tasks](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)
+- [Polymarket API overview](https://docs.polymarket.com/api-reference/introduction)
+- [Polymarket prices and order book](https://docs.polymarket.com/trading/orderbook)

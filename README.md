@@ -17,7 +17,7 @@ Polymarket market selected (real API, no account needed)
 → outcome (right/wrong) feeds back into the eval set and re-scores the agency
 → Cloudflare scoreboard updates publicly
 
-Observability and eval are load-bearing for the score, not polish — build them alongside the first watcher, not after.
+Observability and eval are load-bearing for the score, not polish — build them alongside the first specialist, not after.
 
 ## Architecture
 
@@ -47,11 +47,11 @@ Memory (PostgreSQL-backed) has three layers: **now** (current market/specialist 
 
 ## Hermes Agent — implementation detail
 
-Confirmed: this is [Nous Research's Hermes Agent](https://github.com/nousresearch/hermes-agent), an open-source agent runtime (v0.4+, Feb 2026) — not a hackathon-specific tool, a real framework with a CLI, a gateway daemon, and a documented API surface. ([docs](https://hermes-agent.nousresearch.com/docs/))
+Confirmed: this is [Nous Research's Hermes Agent](https://github.com/nousresearch/hermes-agent), an open-source agent runtime with a CLI, gateway daemon, and documented API surface. ([docs](https://hermes-agent.nousresearch.com/docs/))
 
 It ships with two *different* delegation primitives, and picking the right one for each part of Edge Desk matters for the score, not just for getting it working:
 
-### `delegate_task` — for the real-time watcher fan-out
+### `delegate_task` — for real-time capability fan-out
 
 ```python
 delegate_task(tasks=[
@@ -71,7 +71,7 @@ This is the better fit for the manager/org-structure and observability requireme
 
 - A durable SQLite task board (`~/.hermes/kanban.db`), not a fire-and-forget call. Every task is a row with a status lifecycle (`triage → todo → ready → running → blocked → done → archived`), an assignee (a **named** specialist profile, not an anonymous subagent), and a full event history (`task_events` table) that survives forever — this *is* the observability trace the rubric asks for ("pick a run and see what each agent did, step by step").
 - `kanban_block(reason)` / `kanban_comment()` / `kanban_unblock()` is a built-in review-and-send-back-for-revision loop — literally the L4 org-structure criterion ("manager... reviews outputs, sends back for revision").
-- Dependency links (`kanban_create(..., parents=[...])`) mean the lag-detector task can be wired to start only once all three watcher tasks complete — no custom join logic needed.
+- Dependency links (`kanban_create(..., parents=[...])`) mean the lag-detector task can start only once all required capability tasks complete — no custom join logic needed.
 - `hermes kanban watch` / `hermes dashboard` gives a live board view for free — this can BE (or back) the management UI and the observability dashboard, rather than building either from scratch.
 - **L5 org-structure stretch is a config flag, not new code**: default `max_spawn_depth` is 1 (flat). Setting a profile's `role="orchestrator"` and raising `max_spawn_depth` lets the manager spawn new specialist roles mid-task — the exact "emergent org" criterion.
 - Auto-decomposition (`kanban.auto_decompose: true`, default) can run an LLM decomposer on a "watch market X" triage task and fan it into the graph automatically — this can *be* the manager's planning step instead of us hand-writing it.
@@ -80,13 +80,15 @@ This is the better fit for the manager/org-structure and observability requireme
 
 ### Cron — the outcome tracker
 
-```
-cronjob create schedule="every 10m" prompt="Check odds on market X, compare to alert-time odds, report convergence" deliver="telegram" context_from=<alert_task_id>
+```python
+cronjob(action="create", name="edge-desk-outcomes",
+        schedule="every 1m", script="edge-desk-outcomes.py",
+        no_agent=True, deliver="telegram")
 ```
 
-- Gateway daemon ticks the scheduler every 60s; each due job runs in a fresh, isolated session and delivers straight to a messaging target — `deliver: telegram` needs no custom send code.
-- `context_from` chains a prior job/task's output in as context — useful for feeding the original alert's claim into the convergence check.
-- `no_agent=True` mode runs pure script (no LLM call) — worth using for simple odds-polling to keep cost near zero, only invoking the LLM when a convergence check actually needs interpretation.
+- PostgreSQL `outcome_jobs` remains the authoritative list of `+10/+20/+40` work. A frequent Hermes cron script can atomically claim due rows, fetch prices, and write outcomes.
+- The gateway daemon ticks the scheduler every 60 seconds. In `no_agent=True` mode the script runs without an LLM; empty stdout stays silent, while failures can still deliver to Telegram.
+- Use an agent only for a disputed outcome that requires interpretation. Routine price math stays deterministic and near-zero token cost.
 
 ### Messaging gateway — Telegram (your integration task)
 
@@ -95,7 +97,7 @@ cronjob create schedule="every 10m" prompt="Check odds on market X, compare to a
 3. `hermes gateway` to test in foreground; `hermes gateway install --system` for a persistent systemd/launchd service during the demo.
 4. **Subscriber onboarding maps directly onto Hermes' DM pairing flow**: an unknown user messages the bot, gets a one-time pairing code, we approve via `hermes pairing approve telegram [CODE]` — this can double as the "subscriber" concept without building custom auth.
 5. `/sethome` or `TELEGRAM_HOME_CHANNEL` sets where cron output and proactive alerts land — this is the public/shared alert channel.
-6. Gateway supports 20 platforms total (Discord, Slack, WhatsApp, Signal, SMS, email, etc.) via the same daemon if multi-channel is wanted later — confirms the original brief's "communication platform" options are all real, not just Telegram.
+6. The gateway supports additional messaging platforms through the same daemon. Treat multi-channel delivery as a later extension and verify the desired adapter before committing scope.
 
 ### Memory split
 
@@ -107,7 +109,7 @@ Because Kanban's `task_events` table, run history, and dashboard are durable and
 
 ### Open implementation risks
 
-- **Dispatch latency vs. the cost/latency L5 target**: Kanban's dispatcher polls every 60s by default (`dispatch_interval_seconds`) — that alone risks blowing a sub-1-minute budget before any work happens. Tune this down for the demo, or keep the tightest-latency step (watcher fan-out → lag score) on `delegate_task` entirely and reserve Kanban for the slower post-alert lifecycle where 60s polling doesn't matter.
+- **Dispatch latency vs. the cost/latency L5 target**: Kanban's dispatcher polls every 60s by default (`dispatch_interval_seconds`) — that alone risks blowing a sub-1-minute budget before any work happens. Tune this down for the demo, or keep the tightest-latency step (capability fan-out → lag score) on `delegate_task` and reserve Kanban for the slower post-alert lifecycle where 60s polling does not matter.
 - **Token/cost-per-step isn't natively surfaced by Kanban** — capture usage at step completion and write it into PostgreSQL to hit the Observability L4 "tokens and cost per step" bar.
 - **Requires an LLM provider** — Nous Portal, OpenRouter, or OpenAI key via `hermes model` / `hermes setup --portal`. Whoever sets up the gateway needs one before anything runs live.
 
@@ -116,12 +118,12 @@ Because Kanban's `task_events` table, run history, and dashboard are durable and
 | Parameter | Weight | Target | What proves it for Edge Desk |
 | --- | --- | --- | --- |
 | Working product, real output | 20x (max 80) | L4, stretch L5 | Real Polymarket API + real Telegram send + durable PostgreSQL writes, no staging. Alerts are informational (no trade execution), so the pipeline can run end-to-end autonomously and escalate only low-confidence calls to a human. |
-| Agent org structure | 5x (max 20) | L4, stretch L5 | Manager reads the specific market/topic, decomposes into watcher subtasks, dispatches, and reviews outputs before the lag detector runs — rejects weak evidence and re-dispatches. L5 stretch: manager spawns a one-off deep-dive specialist on ambiguous signals, watchers escalate with a concrete blocker instead of failing silently. |
-| Observability | 7x (max 28) | L4 | Second-highest weight on the whole rubric — invest here. Per-alert trace tree (who watched what, what the lag detector scored, what shipped), tokens/cost per step, filterable by watcher or market. Stretch: diff a good alert vs. a bad one side by side. |
+| Agent org structure | 5x (max 20) | L4, stretch L5 | Manager routes to a named domain specialist; the specialist dispatches price/evidence capability tasks and reviews outputs before the lag detector runs. L5 stretch: manager spawns a one-off deep-dive specialist on ambiguous signals, and agents escalate with a concrete blocker instead of failing silently. |
+| Observability | 7x (max 28) | L4 | Second-highest weight on the whole rubric — invest here. Per-alert trace tree (specialist and capability results, lag score, delivery), tokens/cost per step, filterable by role or market. Stretch: diff a good alert vs. a bad one side by side. |
 | Evaluation and iteration | 5x (max 20) | L4, stretch L5 | The outcome tracker *is* the eval loop: named set of historical resolved markets with known good/bad calls, run before/after changes; ideally closed-loop, where a wrong alert becomes a new eval case and reweights the lag detector automatically. |
 | Agent handoffs and memory | 2x (max 8) | L4, stretch L5 | PostgreSQL holds market history, subscriber filters, and threshold policy; the manager passes accumulated signal context (not raw data) across the handoff chain. |
-| Cost and latency per task | 1x (max 4) | L5 | One watcher-check + lag-scoring cycle is cheap, read-only API calls — realistic sub-1-minute, sub-$0.10. Show this from the trace, not a claim. |
-| Management UI | 1x (max 4) | L3, stretch L4 | Non-engineer can add/remove watched markets, edit filters, pause watchers from a UI, not code. |
+| Cost and latency per task | 1x (max 4) | L5 | One specialist check + lag-scoring cycle is cheap, read-only API calls — realistic sub-1-minute, sub-$0.10. Show this from the trace, not a claim. |
+| Management UI | 1x (max 4) | L3, stretch L4 | Non-engineer can add/remove watched markets, edit filters, and pause monitoring from a UI, not code. |
 
 ### Power-ups, priority order
 
@@ -129,9 +131,9 @@ PostgreSQL (core ledger), Linkup (evidence discovery), and Cloudflare (scoreboar
 
 ## Data sources and known risk
 
-- **Polymarket order books**: public CLOB API, no account/KYC. Straightforward.
+- **Polymarket order books**: public CLOB reads need no account. Use the market WebSocket for live watched prices and REST for startup, recovery, and follow-up snapshots.
 - **Polymarket big-wallet flows**: no clean single endpoint. Likely needs Polymarket's Data API/subgraph or direct on-chain queries against Polygon (Polymarket settles there), filtering for large USDC trades. **This is the highest-risk single task in the sprint** — owner: dev, spike first.
-- **Linkup**: live web search for the news watcher. Turnkey, no known blockers.
+- **Linkup**: fresh evidence discovery shared by the domain specialists.
 - **Historical replay**: for the demo's compressed convergence walkthrough and to seed the eval set, replay 1-2 already-resolved Polymarket markets with a clean, verifiable news trigger. Specific market not yet picked.
 
 ## MVP scope
@@ -140,7 +142,7 @@ PostgreSQL (core ledger), Linkup (evidence discovery), and Cloudflare (scoreboar
 
 **Nice-to-have**: geopolitics and crypto specialists, Dodo entitlements, richer management UI, and additional messaging channels after verification.
 
-**Cut**: compliance/disclaimer language (team decision, out of scope for a buildathon project). Free/paid alert gating — pending decision, leaning cut since Dodo is no longer the root proof.
+**Cut for MVP**: compliance/disclaimer work beyond a clear notification-only label, auto-trading, and paid-channel gating. Add Dodo only after the core free-channel loop is stable.
 
 ## Team and constraints
 
