@@ -12,7 +12,10 @@
   ],
   "scripts": {
     "dev:api": "npm run dev -w @edge-desk/api",
+    "dev:ingestor": "npm run dev -w @edge-desk/ingestor",
     "dev:workers": "npm run dev -w @edge-desk/workers",
+    "start:api": "npm run start -w @edge-desk/api",
+    "start:ingestor": "npm run start -w @edge-desk/ingestor",
     "db:migrate": "npm run migrate -w @edge-desk/db",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit"

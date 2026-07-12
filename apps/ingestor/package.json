@@ -1,5 +1,5 @@
 {
-  "name": "@edge-desk/api",
+  "name": "@edge-desk/ingestor",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,6 @@
     "@edge-desk/contracts": "*",
     "@edge-desk/db": "*",
     "@edge-desk/integrations": "*",
-    "dotenv": "^16.4.0",
-    "fastify": "^5.2.0"
+    "dotenv": "^16.4.0"
   }
 }

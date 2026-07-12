@@ -6,9 +6,10 @@ Edge Desk is an **agency**: a small team of domain-specialist AI agents that wat
 
 ## Repo structure
 
-- [`docs/`](docs) — the Edge Desk plan: loop, [technical architecture](docs/TECH_ARCHITECTURE.md), [responsibility boundaries](docs/HERMES_MARKET_AGENT_CONTEXT.md), [Hermes runtime usage](docs/HERMES_INTEGRATION.md).
+- [`docs/`](docs) — the Edge Desk plan: loop, [technical architecture](docs/TECH_ARCHITECTURE.md), [responsibility boundaries](docs/HERMES_MARKET_AGENT_CONTEXT.md), [Hermes runtime usage](docs/HERMES_INTEGRATION.md), and audited provider notes for [Polymarket](docs/POLYMARKET_INTEGRATION.md) and [Linkup](docs/LINKUP_INTEGRATION.md).
 - [`hackathon-context/`](hackathon-context) — track, scoring rubric, team and sprint constraints.
-- `apps/api` — ingest API: `POST /v1/events`, `/v1/market-checks`, `/v1/replays` (TECH_ARCHITECTURE §4.2).
+- `apps/api` — ingest API: `POST /v1/markets`, `/v1/events`, `/v1/market-checks`, `/v1/replays` (TECH_ARCHITECTURE §4.2).
+- `apps/ingestor` — always-on ingestion process: CLOB-WS snapshot recorder (baseline supply) + Sports-WS goal watcher that POSTs derived events to `/v1/events` and persists Linkup corroboration (§4.4, POLYMARKET_INTEGRATION).
 - `apps/workers` — orchestrator, matcher, alert sender, outcome tracker (§4.3, §4.7–4.9).
 - `apps/web` — management UI + public scoreboard (unowned; `hermes dashboard` may cover part of it).
 - `apps/landing` — public landing page (static, Cloudflare Pages).
@@ -23,7 +24,7 @@ Edge Desk is an **agency**: a small team of domain-specialist AI agents that wat
 
 | Area | Owner |
 | --- | --- |
-| Ingestion: `apps/api`, `packages/integrations`, `packages/db` | Chirag |
+| Ingestion: `apps/api`, `apps/ingestor`, `packages/integrations`, `packages/db` | Chirag |
 | Hermes leg: `packages/agents`, `apps/workers`, Telegram gateway | Hermes owner |
 | Landing page: `apps/landing` | Business |
 | Shared seams: `packages/contracts`, migrations, `docs/` | everyone — announce changes |
@@ -33,10 +34,11 @@ Edge Desk is an **agency**: a small team of domain-specialist AI agents that wat
 
 ```sh
 npm install
-cp .env.example .env       # fill in DATABASE_URL, keys
-docker compose up -d postgres  # disposable Postgres matching .env.example's DATABASE_URL
+cp .env.example .env       # fill in DATABASE_URL (Neon), keys
+docker compose up -d postgres  # optional: disposable local Postgres for tests
 npm run db:migrate         # apply packages/db/migrations
 npm run dev:api            # ingest API on :3000 (GET /health)
+npm run dev:ingestor       # CLOB-WS snapshots + Sports-WS goal watcher
 npm run dev:workers        # orchestrator + matcher + Telegram sender workers
 npm test                   # unit tests always; add real-Postgres coverage when DATABASE_URL is set
 npm run typecheck

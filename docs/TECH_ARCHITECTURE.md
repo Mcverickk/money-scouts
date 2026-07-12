@@ -485,6 +485,34 @@ Unique: `outcome_job_id`.
 
 ## 6. API Contracts
 
+### `POST /v1/markets`
+
+Operator registers a market to watch. The API resolves metadata and outcome token IDs via Gamma, upserts `markets`/`market_outcomes`, then takes a best-effort initial baseline snapshot per outcome via CLOB REST (`provider='clob_rest'`) — registration succeeds even if snapshots fail.
+
+```json
+{
+  "slugOrId": "will-england-beat-norway",
+  "category": "sports",
+  "gameSlug": "epl-norway-england-2026-07-12",
+  "thresholds": {}
+}
+```
+
+Returns `201 Created` (or `200` with the existing row when the Polymarket market is already registered):
+
+```json
+{
+  "marketId": "market-uuid",
+  "polymarketMarketId": "polymarket-market-id",
+  "title": "Will England beat Norway?",
+  "category": "sports",
+  "outcomes": [{ "id": "outcome-uuid", "name": "England", "tokenId": "token-id" }],
+  "baselineSnapshots": 2
+}
+```
+
+`502` when Gamma cannot resolve the market; `gameSlug` links sports markets to the live-score feed (migration 002).
+
 ### `POST /v1/events`
 
 Returns `202 Accepted` after the event and initial run are durable:

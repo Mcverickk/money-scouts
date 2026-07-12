@@ -50,7 +50,8 @@ export interface MarketSnapshot {
 export interface EvidenceItem {
   title: string;
   url: string;
-  publishedAt: string;
+  /** Linkup-sourced evidence has null publishedAt unless parsed from content — retrievedAt is the authoritative clock (docs/LINKUP_INTEGRATION.md). */
+  publishedAt: string | null;
   retrievedAt: string;
   relevance: number;
   sourceTier: 'primary' | 'secondary' | 'social';

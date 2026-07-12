@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "polymarket-docs": {
+      "type": "http",
+      "url": "https://docs.polymarket.com/mcp"
+    },
+    "linkup-docs": {
+      "type": "http",
+      "url": "https://docs.linkup.so/mcp"
+    }
+  }
+}

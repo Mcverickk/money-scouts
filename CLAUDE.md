@@ -13,16 +13,19 @@ Code follows the docs, not vice versa. If code must deviate, update the doc in t
 - `docs/TECH_ARCHITECTURE.md` — components (§4), PostgreSQL schema (§5), API contracts (§6), build order (§9), demo success criteria (§14)
 - `docs/HERMES_INTEGRATION.md` — which Hermes runtime primitive backs what: `delegate_task` for latency-sensitive fan-out, Kanban for post-alert lifecycle, cron (`no_agent=true`) for outcome checks
 - `docs/HERMES_MARKET_AGENT_CONTEXT.md` — responsibility boundaries and the trigger/signal/decision contracts
+- `docs/POLYMARKET_INTEGRATION.md` — audited endpoints per adapter, the Sports WebSocket goal trigger, rate limits
+- `docs/LINKUP_INTEGRATION.md` — search/fetch params, depth-vs-latency, the missing-publishedAt freshness gap
 - `hackathon-context/RULES_AND_SCORING.md` — observability is the second-highest-weighted rubric line; build traces alongside features, not after
 
 ## Commands
 
 ```sh
 npm install
-cp .env.example .env       # DATABASE_URL required for db/migrate and api
-docker compose up -d postgres  # disposable Postgres matching .env.example
+cp .env.example .env       # DATABASE_URL (Neon in the shared env) required for db/migrate, api, ingestor
+docker compose up -d postgres  # optional: disposable local Postgres for tests
 npm run db:migrate         # applies packages/db/migrations/*.sql in order, once each
 npm run dev:api            # Fastify ingest API on :3000, tsx watch
+npm run dev:ingestor       # CLOB-WS snapshot recorder + Sports-WS goal watcher
 npm run dev:workers        # requires Hermes API Server + HERMES_API_KEY
 npm test                   # Hermes client/orchestrator tests; export DATABASE_URL (see below) to
                             # also run orchestratorService.integration.test.ts against real Postgres
@@ -41,7 +44,7 @@ to pick up the integration suite.
 
 npm-workspaces monorepo; packages import each other as `@edge-desk/*` (root `tsconfig.json` paths + workspace symlinks — both must list a package for it to resolve).
 
-Data flow: `apps/api` accepts normalized events (idempotent on `(source, sourceEventId)`, returns 202 + durable runId) → Hermes orchestrator (`apps/workers/src/orchestrator.ts`) routes to a domain specialist (`packages/agents`) which fans out through shared adapters (`packages/integrations`) → deterministic matcher (`packages/scoring/src/lagDetector.ts`) writes decision + alert + outbox **in one transaction** → alert sender delivers via the Hermes Telegram gateway → outcome tracker re-checks at +10/+20/+40. PostgreSQL (`packages/db`) is the system of record for everything, including the per-step agent trace.
+Data flow: `apps/ingestor` watches Polymarket WebSockets (CLOB market channel → throttled `market_snapshots` baseline rows; sports feed score diffs → `POST /v1/events` + Linkup corroboration into `evidence`) → `apps/api` accepts normalized events (idempotent on `(source, sourceEventId)`, returns 202 + durable runId) → Hermes orchestrator (`apps/workers/src/orchestrator.ts`) routes to a domain specialist (`packages/agents`) which fans out through shared adapters (`packages/integrations`) → deterministic matcher (`packages/scoring/src/lagDetector.ts`) writes decision + alert + outbox **in one transaction** → alert sender delivers via the Hermes Telegram gateway → outcome tracker re-checks at +10/+20/+40. PostgreSQL (`packages/db`) is the system of record for everything, including the per-step agent trace.
 
 The TypeScript orchestrator connects to the real Hermes runtime through its authenticated
 API Server Runs API. `apps/workers/src/orchestratorService.ts` claims `agent_runs` with

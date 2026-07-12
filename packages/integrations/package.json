@@ -9,6 +9,10 @@
     "test": "tsx --test src/*.test.ts"
   },
   "dependencies": {
-    "@edge-desk/contracts": "*"
+    "@edge-desk/contracts": "*",
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
   }
 }

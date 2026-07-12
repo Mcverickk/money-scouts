@@ -49,9 +49,10 @@ See [TECH_ARCHITECTURE.md](TECH_ARCHITECTURE.md) for the full component breakdow
 
 ## Data sources and known risk
 
-- **Polymarket order books**: public CLOB reads need no account. Use the market WebSocket for live watched prices and REST for startup, recovery, and follow-up snapshots.
-- **Polymarket big-wallet flows**: no clean single endpoint. Likely needs Polymarket's Data API/subgraph or direct on-chain queries against Polygon (Polymarket settles there), filtering for large USDC trades. **This is the highest-risk single task in the sprint** — owner: dev, spike first.
-- **Linkup**: fresh evidence discovery shared by the domain specialists.
+- **Polymarket order books**: public CLOB reads need no account. Use the market WebSocket for live watched prices and REST for startup, recovery, and follow-up snapshots. Full endpoint audit: [POLYMARKET_INTEGRATION.md](POLYMARKET_INTEGRATION.md).
+- **Polymarket sports feed**: Polymarket's public Sports WebSocket (`wss://sports-api.polymarket.com/ws`) broadcasts live scores including soccer — this is the goal trigger, keeping the whole loop on sponsor APIs. Their docs warn it may be delayed or miss events, so Linkup corroboration stays.
+- **Polymarket big-wallet flows**: de-risked by the 2026-07-12 docs audit (previously flagged highest-risk, assumed to need subgraph/on-chain work): Data API `GET /trades?market=...&filterType=CASH&filterAmount=...` and `GET /holders` cover it directly. Optional signal; still first to cut under time pressure.
+- **Linkup**: fresh evidence discovery shared by the domain specialists. `depth=fast` (<1s, no LLM) for hot-path corroboration; results carry no publish timestamps, so freshness is enforced via `fromDate` + our own `retrievedAt`. Details: [LINKUP_INTEGRATION.md](LINKUP_INTEGRATION.md).
 - **Historical replay**: for the demo's compressed convergence walkthrough and to seed the eval set, replay 1-2 already-resolved Polymarket markets with a clean, verifiable news trigger. Specific market not yet picked.
 
 ## MVP scope
