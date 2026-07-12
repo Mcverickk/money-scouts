@@ -57,6 +57,72 @@ The API Server has access to the configured Hermes toolset, potentially includin
 file operations. Keep it bound to loopback or a private network, protect it with `API_SERVER_KEY`,
 and enable only the toolsets required by the Edge Desk profile.
 
+## Telegram direct delivery — final decision notifications
+
+Telegram delivery happens only after the deterministic matcher creates an `alerts` row and a
+matching `delivery_outbox` row. The alert sender does not ask another model to reconsider the
+decision. It calls Hermes' signed webhook adapter with `deliver_only: true`; Hermes then sends
+the stored message through its configured Telegram gateway.
+
+This gives the application synchronous delivery acknowledgement, HMAC authentication, rate
+limits, and one-hour deduplication through `X-Request-ID`, while keeping the Telegram bot token
+inside Hermes rather than the Node.js service.
+
+Configure the Hermes host:
+
+```sh
+# ~/.hermes/.env
+TELEGRAM_BOT_TOKEN=123456:replace-me
+WEBHOOK_ENABLED=true
+WEBHOOK_PORT=8644
+WEBHOOK_SECRET=replace-with-a-long-random-secret
+```
+
+Add the direct-delivery route to `~/.hermes/config.yaml`:
+
+```yaml
+platforms:
+  webhook:
+    enabled: true
+    extra:
+      port: 8644
+      secret: replace-with-a-long-random-secret
+      routes:
+        edge-desk-alert:
+          secret: replace-with-a-long-random-secret
+          deliver: telegram
+          deliver_only: true
+          prompt: "{message}"
+          deliver_extra:
+            chat_id: "{destination}"
+```
+
+The application uses the matching route secret:
+
+```sh
+HERMES_TELEGRAM_WEBHOOK_URL=http://127.0.0.1:8644/webhooks/edge-desk-alert
+HERMES_TELEGRAM_WEBHOOK_SECRET=replace-with-a-long-random-secret
+WORKER_ROLES=orchestrator,alert_sender
+```
+
+`delivery_outbox.destination` must be the Telegram chat ID (negative IDs are normal for groups).
+The client signs `<unix_timestamp>.<exact_json_body>` with HMAC-SHA256 and sends the V2 signature
+headers expected by Hermes. `delivery_outbox.idempotency_key` becomes `X-Request-ID`; a retry
+that Hermes already delivered returns `status=duplicate` and is treated as success.
+
+On success, the sender atomically:
+
+- Marks the outbox row and alert `sent` and stores Hermes' delivery ID.
+- Creates the `+10/+20/+40` outcome jobs relative to the actual send time.
+
+Transient network, rate-limit, and gateway failures use capped exponential backoff. Invalid
+authentication/configuration fails permanently rather than retrying forever. Run a one-off
+Telegram smoke test before starting workers:
+
+```sh
+hermes send --to telegram:<chat-id> "Edge Desk Telegram smoke test"
+```
+
 ## `delegate_task` — for real-time capability fan-out
 
 ```python

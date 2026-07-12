@@ -34,16 +34,33 @@ Edge Desk is an **agency**: a small team of domain-specialist AI agents that wat
 ```sh
 npm install
 cp .env.example .env       # fill in DATABASE_URL, keys
+docker compose up -d postgres  # disposable Postgres matching .env.example's DATABASE_URL
 npm run db:migrate         # apply packages/db/migrations
 npm run dev:api            # ingest API on :3000 (GET /health)
 npm run dev:workers        # Hermes orchestrator worker (requires Hermes API Server)
-npm test                   # orchestrator trust-boundary and Hermes API client tests
+npm test                   # unit tests always; add real-Postgres coverage when DATABASE_URL is set
 npm run typecheck
 ```
 
 Before starting workers, enable Hermes' API Server in `~/.hermes/.env` with
 `API_SERVER_ENABLED=true` and the same bearer key as `HERMES_API_KEY`, then run
 `hermes gateway`. See [`docs/HERMES_INTEGRATION.md`](docs/HERMES_INTEGRATION.md#api-server-bridge--the-typescript-orchestrator-service).
+
+### Testing
+
+- **`npm test`** — always runs the mocked unit tests (`hermesClient.test.ts`, `orchestrator.test.ts`:
+  HTTP contract, polling, and every Hermes trust-boundary case — hallucinated evidence IDs, unknown
+  outcome tokens, missing baseline, manager rejection). No infra required; safe for any teammate.
+- With `DATABASE_URL` **exported in your shell** and pointed at a real Postgres
+  (`docker compose up -d postgres && npm run db:migrate`), the **same `npm test`** additionally
+  runs `orchestratorService.integration.test.ts` against it: real `FOR UPDATE SKIP LOCKED`
+  claim-locking (including a genuine concurrent-claimants race), the lateral-join baseline/current
+  snapshot mapping, and the transactional `run_steps`/`agent_runs` writes on both success and
+  failure. It self-skips (not fails) when `DATABASE_URL` is unset. Note: `npm test` runs inside the
+  `apps/workers` workspace, so a `.env` at the repo root is **not** auto-loaded here — export it
+  explicitly: `export DATABASE_URL=postgres://postgres:postgres@localhost:5432/edge_desk`.
+- Not yet covered by any test: `apps/api` ingest, `packages/agents/sports.ts`, and everything in
+  `packages/integrations` (Polymarket, Linkup, Telegram) — all still `not implemented` stubs.
 
 ## Working agreement (8-hour sprint)
 

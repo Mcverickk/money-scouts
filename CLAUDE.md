@@ -20,15 +20,22 @@ Code follows the docs, not vice versa. If code must deviate, update the doc in t
 ```sh
 npm install
 cp .env.example .env       # DATABASE_URL required for db/migrate and api
+docker compose up -d postgres  # disposable Postgres matching .env.example
 npm run db:migrate         # applies packages/db/migrations/*.sql in order, once each
 npm run dev:api            # Fastify ingest API on :3000, tsx watch
 npm run dev:workers        # requires Hermes API Server + HERMES_API_KEY
-npm test                   # Hermes client/orchestrator tests
+npm test                   # Hermes client/orchestrator tests; export DATABASE_URL (see below) to
+                            # also run orchestratorService.integration.test.ts against real Postgres
 npm run typecheck          # tsc --noEmit across all workspaces
 ```
 
 No build step: everything runs through `tsx` directly from TypeScript source. Tests use
-Node's built-in test runner through `tsx --test`.
+Node's built-in test runner through `tsx --test`. `apps/workers/src/*.test.ts` are pure/mocked
+(no I/O); `orchestratorService.integration.test.ts` runs the same claim/load/persist code against
+a real Postgres and self-skips when `DATABASE_URL` is absent. `npm run test -w @edge-desk/workers`
+runs with cwd `apps/workers`, so the root `.env` is not auto-loaded there — export
+`DATABASE_URL=postgres://postgres:postgres@localhost:5432/edge_desk` in the shell before `npm test`
+to pick up the integration suite.
 
 ## Architecture
 

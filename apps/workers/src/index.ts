@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import { getPool } from '@edge-desk/db';
+import { HermesTelegramClient } from '@edge-desk/integrations';
+import { runAlertSenderWorker } from './alertSender.js';
 import { createHermesOrchestratorFromEnv } from './orchestrator.js';
 import { runOrchestratorWorker } from './orchestratorService.js';
 
@@ -15,13 +17,31 @@ const roles = new Set(
     .filter(Boolean),
 );
 
-if (!roles.has('orchestrator')) {
+const pool = getPool();
+const workers: Array<Promise<void>> = [];
+
+if (roles.has('orchestrator')) {
+  workers.push(
+    runOrchestratorWorker({
+      pool,
+      orchestrator: createHermesOrchestratorFromEnv(),
+      signal: abortController.signal,
+    }),
+  );
+}
+if (roles.has('alert_sender')) {
+  workers.push(
+    runAlertSenderWorker({
+      pool,
+      sender: HermesTelegramClient.fromEnv(),
+      signal: abortController.signal,
+    }),
+  );
+}
+
+if (workers.length === 0) {
   console.log('edge-desk workers: no implemented worker role selected');
 } else {
-  await runOrchestratorWorker({
-    pool: getPool(),
-    orchestrator: createHermesOrchestratorFromEnv(),
-    signal: abortController.signal,
-  });
-  await getPool().end();
+  await Promise.all(workers);
+  await pool.end();
 }
