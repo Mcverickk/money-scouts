@@ -18,6 +18,8 @@
     "start:api": "npm run start -w @edge-desk/api",
     "start:ingestor": "npm run start -w @edge-desk/ingestor",
     "db:migrate": "npm run migrate -w @edge-desk/db",
+    "demo:feed": "npm run feed -w @edge-desk/replay --",
+    "telegram:markets": "npm run post:markets -w @edge-desk/ingestor",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit"
   },

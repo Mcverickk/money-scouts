@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "post:markets": "tsx src/tools/postMarketsCard.ts"
   },
   "dependencies": {
     "@edge-desk/contracts": "*",
