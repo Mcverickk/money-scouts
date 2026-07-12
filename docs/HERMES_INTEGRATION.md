@@ -6,6 +6,57 @@ Confirmed: this is [Nous Research's Hermes Agent](https://github.com/nousresearc
 
 It ships with two *different* delegation primitives, and picking the right one for each part of Edge Desk matters for the score, not just for getting it working:
 
+## API Server bridge — the TypeScript orchestrator service
+
+`apps/workers` embeds no imitation of Hermes. It connects to the real Hermes gateway through
+the authenticated [API Server Runs API](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server/):
+
+```text
+agent_runs.status = queued
+-> orchestrator worker claims the row with FOR UPDATE SKIP LOCKED
+-> loads the normalized event, evidence, outcomes, snapshots, and recent alerts
+-> POST /v1/runs to Hermes with per-run session id and per-market memory key
+-> Hermes manager plans, calls delegate_task, and reviews specialist output
+-> worker polls /v1/runs/{id}, validates the JSON signal against supplied IDs
+-> run_steps stores plan, signal, review, model, tokens, latency, and source refs
+-> deterministic matcher consumes that stored signal
+```
+
+Hermes setup on the gateway host:
+
+```sh
+# ~/.hermes/.env
+API_SERVER_ENABLED=true
+API_SERVER_KEY=replace-with-a-long-random-key
+
+hermes tools   # enable the delegation toolset for the api_server platform
+hermes gateway
+```
+
+Application configuration uses the same bearer key:
+
+```sh
+HERMES_API_URL=http://127.0.0.1:8642
+HERMES_API_KEY=replace-with-a-long-random-key
+HERMES_API_MODEL=hermes-agent
+```
+
+The bridge uses `X-Hermes-Session-Key=edge-desk:market:<market-id>` so relevant Hermes
+memory is scoped to a market, while every application run gets its own transcript session.
+PostgreSQL row claiming and the durable `hermes_task_id` are the application's idempotency
+boundary. The client also sends an `Idempotency-Key` derived from `agent_runs.id` for API
+versions that support run-submission deduplication; Hermes v0.18.2 does not yet deduplicate
+`POST /v1/runs`, so a crash after submission can leave an orphan Hermes run for reconciliation.
+
+Provider content is explicitly marked untrusted in the manager prompt. The returned category,
+outcome token, evidence IDs, numeric ranges, plan, signal, and review are checked in code before
+they enter the matcher. A manager rejection becomes a hard `manager_review_failed` risk flag.
+Hermes runs that require approval are not auto-approved by this service.
+
+The API Server has access to the configured Hermes toolset, potentially including terminal and
+file operations. Keep it bound to loopback or a private network, protect it with `API_SERVER_KEY`,
+and enable only the toolsets required by the Edge Desk profile.
+
 ## `delegate_task` — for real-time capability fan-out
 
 ```python

@@ -14,6 +14,7 @@
     "dev:api": "npm run dev -w @edge-desk/api",
     "dev:workers": "npm run dev -w @edge-desk/workers",
     "db:migrate": "npm run migrate -w @edge-desk/db",
+    "test": "npm run test -w @edge-desk/workers",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

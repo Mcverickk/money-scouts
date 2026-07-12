@@ -36,8 +36,14 @@ npm install
 cp .env.example .env       # fill in DATABASE_URL, keys
 npm run db:migrate         # apply packages/db/migrations
 npm run dev:api            # ingest API on :3000 (GET /health)
+npm run dev:workers        # Hermes orchestrator worker (requires Hermes API Server)
+npm test                   # orchestrator trust-boundary and Hermes API client tests
 npm run typecheck
 ```
+
+Before starting workers, enable Hermes' API Server in `~/.hermes/.env` with
+`API_SERVER_ENABLED=true` and the same bearer key as `HERMES_API_KEY`, then run
+`hermes gateway`. See [`docs/HERMES_INTEGRATION.md`](docs/HERMES_INTEGRATION.md#api-server-bridge--the-typescript-orchestrator-service).
 
 ## Working agreement (8-hour sprint)
 
