@@ -3,7 +3,12 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { config } from 'dotenv';
 import { getPool } from './index.js';
+
+// npm workspace scripts run with cwd inside the package; load the repo-root .env
+// explicitly (missing file is fine — hosted envs inject real env vars).
+config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env') });
 
 const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
