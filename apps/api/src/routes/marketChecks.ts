@@ -1,6 +1,8 @@
 // POST /v1/market-checks — scheduled or manual market evaluation (docs/TECH_ARCHITECTURE.md §6).
-// No triggering event: creates a pending agent_run with event_id null so the orchestrator
-// evaluates the market's current state on demand (cron sweep, operator demo).
+// No triggering event: creates an agent_run with event_id null. Status stays 'pending' (NOT
+// 'queued') on purpose: the orchestrator's loadOrchestrationInput inner-joins events, so an
+// event-less run would claim-then-fail. Flip to 'queued' once the workers leg supports
+// event-less market checks — coordinate with the Hermes owner before changing.
 
 import type { FastifyInstance } from 'fastify';
 import { getPool } from '@edge-desk/db';
