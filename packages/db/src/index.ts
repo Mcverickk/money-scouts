@@ -1,11 +1,10 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { config } from 'dotenv';
 import pg from 'pg';
 
-// npm workspace scripts run with cwd inside the package, so load the repo-root
-// .env explicitly (missing file is fine — hosted envs inject real env vars).
-config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env') });
+// Deliberately NO dotenv here: importing this package must not mutate process.env.
+// (orchestratorService.integration.test.ts truncates whatever DATABASE_URL points at
+// and relies on the var being unset to skip — an import side effect once defeated
+// that guard and wiped the shared Neon DB.) Entrypoints that want .env load it
+// themselves: apps/api, apps/ingestor, and migrate.ts all resolve the repo-root path.
 
 let pool: pg.Pool | undefined;
 
@@ -15,6 +14,12 @@ export function getPool(): pg.Pool {
       throw new Error('DATABASE_URL is not set (copy .env.example to .env)');
     }
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+    // Hosted Postgres (Neon) closes idle connections; pg surfaces that as a
+    // pool-level 'error' event which crashes the process when unhandled. The
+    // client is already discarded — logging is the correct recovery.
+    pool.on('error', (err) => {
+      console.error('[db] idle client error (connection discarded):', err.message);
+    });
   }
   return pool;
 }

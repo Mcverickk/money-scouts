@@ -1,0 +1,20 @@
+{
+  "name": "norway-england-goal",
+  "version": "1",
+  "description": "England scores at 63' and leads 1-0 — the docs/TECH_ARCHITECTURE.md demo scenario. Derived game slug is 'demo-999001' ({leagueAbbreviation}-{gameId}); register the demo market with that game_slug.",
+  "game": {
+    "gameId": 999001,
+    "leagueAbbreviation": "demo",
+    "homeTeam": "Norway",
+    "awayTeam": "England",
+    "status": "InProgress",
+    "period": "2H",
+    "live": true,
+    "ended": false
+  },
+  "timeline": [
+    { "afterSeconds": 0, "score": "0-0", "elapsed": "62'" },
+    { "afterSeconds": 10, "score": "0-1", "elapsed": "63'" },
+    { "afterSeconds": 25, "score": "0-1", "elapsed": "64'" }
+  ]
+}

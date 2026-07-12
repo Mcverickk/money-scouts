@@ -529,6 +529,10 @@ Returns `202 Accepted` after the event and initial run are durable:
 
 Reposting the same idempotency key returns the existing IDs and `duplicate: true` without launching a second run.
 
+The request may carry an optional `evidence[]` array (`{title, url, retrievedAt, excerpt?, contentHash?, sourceTier?, publishedAt?, relevance?, confidence?, raw?}` — `IngestEvidenceItem` in `packages/contracts`). Inline evidence is inserted in the same transaction as the event and the queued run, so the orchestrator can never claim a run whose evidence is not yet durable. The sports ingestor uses this: feed payload as `primary` evidence plus Linkup corroboration, gathered before the POST.
+
+The run is created with `status = 'queued'` — the claim state of the workers-leg orchestrator.
+
 ### `POST /v1/market-checks`
 
 ```json

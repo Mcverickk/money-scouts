@@ -71,9 +71,20 @@ export async function marketsRoutes(app: FastifyInstance) {
         if (created) {
           market = inserted.rows[0];
         } else {
+          // Re-registration is how the operator updates the feed mapping/thresholds
+          // (e.g. pointing a market at a new live game or a replay fixture slug).
           const existing = await client.query(
-            `select id, title, category from markets where polymarket_market_id = $1`,
-            [resolved.polymarketMarketId],
+            `update markets
+                set game_slug = coalesce($2, game_slug),
+                    thresholds = coalesce($3, thresholds),
+                    updated_at = now()
+              where polymarket_market_id = $1
+              returning id, title, category`,
+            [
+              resolved.polymarketMarketId,
+              gameSlug ?? null,
+              thresholds ? JSON.stringify(thresholds) : null,
+            ],
           );
           market = existing.rows[0];
         }

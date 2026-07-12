@@ -4,8 +4,8 @@
 // (never acknowledge work that is not durable — DB down means 503, not a fake ack).
 
 import type { FastifyInstance } from 'fastify';
-import { getPool } from '@edge-desk/db';
-import type { NormalizedEvent } from '@edge-desk/contracts';
+import { getPool, insertEvidence } from '@edge-desk/db';
+import type { IngestEvidenceItem, NormalizedEvent } from '@edge-desk/contracts';
 
 const bodySchema = {
   type: 'object',
@@ -29,11 +29,36 @@ const bodySchema = {
     occurredAt: { type: 'string', format: 'date-time' },
     sourceUrl: { type: 'string' },
     data: { type: 'object' },
+    // Inline evidence lands in the same transaction as the event + queued run, so the
+    // orchestrator can never claim a run whose evidence is not yet durable (§4.5).
+    evidence: {
+      type: 'array',
+      maxItems: 20,
+      items: {
+        type: 'object',
+        required: ['title', 'url', 'retrievedAt'],
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string', minLength: 1 },
+          url: { type: 'string', minLength: 1 },
+          excerpt: { type: 'string' },
+          contentHash: { type: 'string' },
+          sourceTier: { type: 'string', enum: ['primary', 'secondary', 'social'] },
+          publishedAt: { type: ['string', 'null'] },
+          retrievedAt: { type: 'string', format: 'date-time' },
+          relevance: { type: 'number' },
+          confidence: { type: 'number' },
+          raw: {},
+        },
+      },
+    },
   },
 } as const;
 
+type EventsBody = NormalizedEvent & { evidence?: IngestEvidenceItem[] };
+
 export async function eventsRoutes(app: FastifyInstance) {
-  app.post<{ Body: NormalizedEvent }>(
+  app.post<{ Body: EventsBody }>(
     '/v1/events',
     { schema: { body: bodySchema } },
     async (req, reply) => {
@@ -110,9 +135,31 @@ export async function eventsRoutes(app: FastifyInstance) {
         }
 
         const eventId: string = inserted.rows[0].id;
+
+        if (event.evidence?.length) {
+          await insertEvidence(
+            eventId,
+            event.evidence.map((item) => ({
+              title: item.title,
+              url: item.url,
+              excerpt: item.excerpt ?? null,
+              content_hash: item.contentHash ?? null,
+              source_tier: item.sourceTier ?? 'secondary',
+              published_at: item.publishedAt ?? null,
+              retrieved_at: item.retrievedAt,
+              relevance: item.relevance ?? null,
+              confidence: item.confidence ?? null,
+              raw_payload: item.raw ?? null,
+            })),
+            client,
+          );
+        }
+
+        // 'queued' is the claim state of the workers-leg orchestrator
+        // (apps/workers/src/orchestratorService.ts claimNextQueuedRun).
         const run = await client.query(
           `insert into agent_runs (market_id, event_id, specialist, status, mode)
-           values ($1, $2, $3, 'pending', 'live')
+           values ($1, $2, $3, 'queued', 'live')
            returning id`,
           [marketRow.id, eventId, event.category],
         );

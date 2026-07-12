@@ -20,6 +20,8 @@
     "start:workers": "npm run start -w @edge-desk/workers",
     "db:migrate": "npm run migrate -w @edge-desk/db",
     "smoke:telegram": "tsx scripts/smokeTelegram.ts",
+    "demo:feed": "npm run feed -w @edge-desk/replay --",
+    "telegram:markets": "npm run post:markets -w @edge-desk/ingestor",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit"
   },

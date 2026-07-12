@@ -64,6 +64,24 @@ export interface EvidenceRecord {
   confidence: number;
 }
 
+/**
+ * Optional inline evidence accepted by POST /v1/events alongside the event (§4.5, §6).
+ * Inserted in the SAME transaction as the event + queued run, so the orchestrator can
+ * never claim a run before its evidence is durable.
+ */
+export interface IngestEvidenceItem {
+  title: string;
+  url: string;
+  excerpt?: string;
+  contentHash?: string;
+  sourceTier?: 'primary' | 'secondary' | 'social';
+  publishedAt?: string | null;
+  retrievedAt: string;
+  relevance?: number;
+  confidence?: number;
+  raw?: unknown;
+}
+
 /** Immutable matcher output (§4.7). Only `notify` creates an alert row. */
 export interface MatcherDecision {
   action: MatcherAction;
