@@ -102,8 +102,14 @@ The application uses the matching route secret:
 ```sh
 HERMES_TELEGRAM_WEBHOOK_URL=http://127.0.0.1:8644/webhooks/edge-desk-alert
 HERMES_TELEGRAM_WEBHOOK_SECRET=replace-with-a-long-random-secret
-WORKER_ROLES=orchestrator,alert_sender
+TELEGRAM_ALERT_CHAT_ID=-1001234567890
+WORKER_ROLES=orchestrator,matcher,alert_sender
 ```
+
+The `matcher` role consumes completed Hermes orchestration steps, runs the deterministic lag
+policy, and atomically writes the decision plus alert/outbox rows only for `notify`. The
+`alert_sender` role then delivers those rows. This separation means Hermes supplies the
+reviewed market signal, while application code retains the final notification gates.
 
 `delivery_outbox.destination` must be the Telegram chat ID (negative IDs are normal for groups).
 The client signs `<unix_timestamp>.<exact_json_body>` with HMAC-SHA256 and sends the V2 signature

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { getPool } from '@edge-desk/db';
 import { HermesTelegramClient } from '@edge-desk/integrations';
 import { runAlertSenderWorker } from './alertSender.js';
+import { runMatcherWorker } from './matcher.js';
 import { createHermesOrchestratorFromEnv } from './orchestrator.js';
 import { runOrchestratorWorker } from './orchestratorService.js';
 
@@ -34,6 +35,14 @@ if (roles.has('alert_sender')) {
     runAlertSenderWorker({
       pool,
       sender: HermesTelegramClient.fromEnv(),
+      signal: abortController.signal,
+    }),
+  );
+}
+if (roles.has('matcher')) {
+  workers.push(
+    runMatcherWorker({
+      pool,
       signal: abortController.signal,
     }),
   );

@@ -194,7 +194,7 @@ async function persistDelivered(
     await client.query(
       `insert into outcome_jobs (alert_id, horizon_minutes, scheduled_for)
        select $1, horizon, $2::timestamptz + make_interval(mins => horizon)
-         from unnest(array[10, 20, 40]) as horizon
+         from unnest(array[10, 20, 40]) as horizons(horizon)
        on conflict (alert_id, horizon_minutes) do nothing`,
       [job.alertId, sentAt],
     );
