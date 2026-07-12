@@ -1,0 +1,26 @@
+{
+  "games": [
+    {
+      "game_id": 999001,
+      "name": "norway-england-goal",
+      "events": {
+        "Polymarket": {"score": "0-1", "elapsed": "63'", "confidence": 0.4, "notes": ["raw"]},
+        "ESPN": {"score": "0-1", "elapsed": "63'", "confidence": 0.9},
+        "Flashscore": {"score": "0-1", "elapsed": "63'", "confidence": 0.9},
+        "LiveScore": {"score": "0-1", "elapsed": "63'", "confidence": 0.9},
+        "Sofascore": {"score": "0-2", "elapsed": "63'", "confidence": 0.6, "notes": ["contradiction"]}
+      }
+    },
+    {
+      "game_id": 999002,
+      "name": "argentina-goal",
+      "events": {
+        "Polymarket": {"score": "1-0", "elapsed": "84'", "confidence": 0.4},
+        "ESPN": {"score": "1-0", "elapsed": "84'", "confidence": 0.9},
+        "Flashscore": {"score": "1-0", "elapsed": "84'", "confidence": 0.9},
+        "LiveScore": {"score": "1-0", "elapsed": "84'", "confidence": 0.9},
+        "Sofascore": {"score": "1-1", "elapsed": "84'", "confidence": 0.9}
+      }
+    }
+  ]
+}

@@ -5,7 +5,8 @@
 
 import type { MatcherAction, SignalDirection, SpecialistSignal } from '@edge-desk/contracts';
 
-export const SCORING_POLICY_VERSION = 'sports-v1';
+// v2: only HARD risk flags block notify; advisory flags are recorded, not blocking.
+export const SCORING_POLICY_VERSION = 'sports-v2';
 
 export interface LagThresholds {
   minEvidenceConfidence: number;
@@ -98,8 +99,12 @@ export function evaluateLag(inputs: LagInputs, thresholds: LagThresholds): LagRe
   if (inputs.inCooldown) {
     failedGates.push('cooldown_active');
   }
-  if (inputs.signal.riskFlags.length > 0) {
-    failedGates.push(`risk_flags:${inputs.signal.riskFlags.join(',')}`);
+  // §4.7: notify is blocked by HARD risk flags, not by every advisory caution a
+  // specialist volunteers (an LLM flags something on nearly every event). Hard flags
+  // are integrity failures; everything else stays recorded on the decision as context.
+  const hardFlags = inputs.signal.riskFlags.filter((flag) => HARD_RISK_FLAGS.has(flag));
+  if (hardFlags.length > 0) {
+    failedGates.push(`risk_flags:${hardFlags.join(',')}`);
   }
 
   const action: MatcherAction =
@@ -107,3 +112,15 @@ export function evaluateLag(inputs: LagInputs, thresholds: LagThresholds): LagRe
 
   return { action, observedMoveBps, lagBps, failedGates: [...needsReview, ...failedGates] };
 }
+
+/** Integrity failures that block notify outright (§4.7 "no hard risk flag"). */
+const HARD_RISK_FLAGS = new Set([
+  'manager_review_failed',
+  'ambiguous_outcome_mapping',
+  'conflicting_evidence',
+  'missing_baseline',
+  'missing_post_event_snapshot',
+  'circular_reporting',
+  'unverified_announcement',
+  'ambiguous_resolution_wording',
+]);

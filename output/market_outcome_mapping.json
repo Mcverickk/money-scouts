@@ -1,0 +1,24 @@
+{
+  "games": [
+    {
+      "game_name": "norway-england-goal",
+      "direction": "away_win_favored",
+      "instrument": "England_to_win",
+      "price_movement": "upward",
+      "expectedMoveBps": 100,
+      "confidence": 0.70,
+      "risk": "medium",
+      "notes": "Strong high-confidence signals from ESPN/LiveScore/Flashscore; minor discord from Polymarket (0.4) and Sofascore (0.6) indicating some contradiction."
+    },
+    {
+      "game_name": "argentina-goal",
+      "direction": "away_win_favored",
+      "instrument": "Argentina_to_win",
+      "price_movement": "upward",
+      "expectedMoveBps": 180,
+      "confidence": 0.80,
+      "risk": "medium",
+      "notes": "High confidence from ESPN/Flashscore/LiveScore (0.9) supporting Argentina; Polymarket signals weaker at 0.4; late-game context reduces risk slightly."
+    }
+  ]
+}

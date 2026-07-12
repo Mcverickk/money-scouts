@@ -7,8 +7,8 @@
 
 import { createHash } from 'node:crypto';
 import type { IngestEvidenceItem, NormalizedEvent } from '@edge-desk/contracts';
-import { linkup, sports } from '@edge-desk/integrations';
-import type { WatchedMarket } from '@edge-desk/db';
+import { clob, linkup, sports } from '@edge-desk/integrations';
+import { insertMarketSnapshot, type WatchedMarket } from '@edge-desk/db';
 
 const SPORTS_FEED_URL = 'wss://sports-api.polymarket.com/ws';
 
@@ -85,6 +85,40 @@ async function buildEvidence(e: sports.ScoreChangeEvent): Promise<IngestEvidence
   }
 }
 
+/**
+ * Post-event REST snapshot, taken BEFORE the event is posted. Quiet order books can go
+ * minutes between CLOB-WS ticks, so without this the orchestrator can claim the run
+ * before any snapshot with observed_at > occurred_at exists ("missing post-event
+ * snapshot" -> hard risk flag). Capturing via REST first guarantees one.
+ */
+async function snapshotNow(market: WatchedMarket): Promise<void> {
+  await Promise.all(
+    market.outcomes.map(async (outcome) => {
+      try {
+        const { snapshot, raw } = await clob.fetchSnapshot(outcome.token_id, {
+          marketId: market.polymarket_market_id,
+          outcome: outcome.name,
+        });
+        await insertMarketSnapshot({
+          market_id: market.id,
+          outcome_id: outcome.id,
+          yes_price: snapshot.yesPrice,
+          best_bid: snapshot.bestBid,
+          best_ask: snapshot.bestAsk,
+          spread_bps: snapshot.spreadBps,
+          depth_usd: snapshot.depthUsd,
+          provider: 'clob_rest',
+          provider_ref: outcome.token_id,
+          raw_payload: raw,
+          observed_at: snapshot.observedAt,
+        });
+      } catch (err) {
+        console.error(`[goalWatcher] post-event snapshot failed for ${outcome.name}`, err);
+      }
+    }),
+  );
+}
+
 export function startGoalWatcher(watched: WatchedMarket[]): () => void {
   const bySlug = new Map<string, WatchedMarket>();
   for (const market of watched) {
@@ -100,7 +134,7 @@ export function startGoalWatcher(watched: WatchedMarket[]): () => void {
       const market = bySlug.get(e.slug);
       if (!market) return;
       void (async () => {
-        const evidence = await buildEvidence(e);
+        const [evidence] = await Promise.all([buildEvidence(e), snapshotNow(market)]);
         const accepted = await postEvent({
           sourceEventId: `${e.slug}-${e.score}`, // stable per score line: dedupe for free
           source: 'polymarket_sports_ws',

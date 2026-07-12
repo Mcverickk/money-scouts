@@ -1,0 +1,32 @@
+{
+  "name": "argentina-goal",
+  "version": "1",
+  "description": "Argentina scores against France at 63' in a 2026 World Cup knockout \u2014 semantically coherent with the 'Will Argentina win the 2026 FIFA World Cup?' market (558938). Derived game slug: wc-999002.",
+  "game": {
+    "gameId": 999002,
+    "leagueAbbreviation": "wc",
+    "homeTeam": "Argentina",
+    "awayTeam": "France",
+    "status": "InProgress",
+    "period": "2H",
+    "live": true,
+    "ended": false
+  },
+  "timeline": [
+    {
+      "afterSeconds": 0,
+      "score": "2-0",
+      "elapsed": "86'"
+    },
+    {
+      "afterSeconds": 10,
+      "score": "3-0",
+      "elapsed": "88'"
+    },
+    {
+      "afterSeconds": 25,
+      "score": "3-0",
+      "elapsed": "89'"
+    }
+  ]
+}
